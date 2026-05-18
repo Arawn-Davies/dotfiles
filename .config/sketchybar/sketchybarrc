@@ -7,7 +7,8 @@ PLUGIN_DIR="$CONFIG_DIR/plugins"
 
 # Start stats provider
 killall stats_provider 2>/dev/null
-stats_provider --cpu usage --memory ram_usage --disk usage --interval 5 &
+#stats_provider --system OS_VERSION --cpu temperature --cpu usage --memory ram_usage --disk usage --disk total --interval 5 &
+stats_provider --all --interval 5 &
 
 ##### Bar Appearance #####
 # Configuring the general appearance of the bar.
@@ -96,6 +97,8 @@ sketchybar --update
 
 
 sketchybar --add item cpu right \
+           --set cpu_tem
+           --add item cpu right \
            --set cpu icon="󰘚" \
                      script="sketchybar --set cpu label=\$CPU_USAGE" \
            --subscribe cpu system_stats \
@@ -107,3 +110,6 @@ sketchybar --add item cpu right \
            --set disk icon="󰋊" \
                       script="sketchybar --set disk label=\$DISK_USAGE" \
            --subscribe disk system_stats
+
+
+           --system OS_VERSION --cpu temperature --cpu usage --memory ram_usage --disk usage --disk total

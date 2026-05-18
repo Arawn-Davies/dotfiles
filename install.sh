@@ -24,8 +24,8 @@ echo
 # ── Cross-platform ────────────────────────────────────────────────
 
 # Shell
-link "$DOTFILES/zshrc"        "$HOME/.zshrc"
-link "$DOTFILES/worktrees.sh" "$HOME/worktrees.sh"
+#link "$DOTFILES/zshrc"        "$HOME/.zshrc"
+#link "$DOTFILES/worktrees.sh" "$HOME/worktrees.sh"
 
 # Tmux
 link "$DOTFILES/tmux.conf"    "$HOME/.tmux.conf"
