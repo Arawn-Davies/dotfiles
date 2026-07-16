@@ -29,3 +29,4 @@
     ~/.fzfrc: fzfrc
     ~/.asdfrc: asdfrc
     ~/.Brewfile: homebrew/Brewfile
+    ~/.config/nvim: neovim
