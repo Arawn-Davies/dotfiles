@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 
 # Claude Code hook -> record this PANE's Claude state. State is passed as $1 and
-# drives the status-bar dot (theme.conf), the switcher (fzf-claude.sh) and the
-# banner/escalation (claude-tick.sh):
+# drives the window-status dot (tmux.conf) and the banner/escalation
+# (claude-tick.sh, run from status-right):
 #
 #   working  -> yellow ●   (processing)
 #   urgent   -> red ●      (needs a click: permission / question)
 #   done     -> blue ●     (finished, waiting for you)
 #   clear    -> no dot     (session ended)
 #
-# Wired in claude/settings.json:
+# Wired in ~/.claude/settings.json (hooks merged in place):
 #   SessionStart/UserPromptSubmit/Pre+PostToolUse -> working
 #   Notification permission/elicitation            -> urgent
 #   Stop                                           -> done (see below)

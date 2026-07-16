@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# prefix t A -> jump straight to the oldest blocked (urgent) Claude session,
-# skipping the switcher popup. Falls back to a message when nothing is blocked.
+# prefix C-a A -> jump straight to the oldest blocked (urgent) Claude session.
+# Falls back to a message when nothing is blocked.
 
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$dir/claude-lib.sh"
