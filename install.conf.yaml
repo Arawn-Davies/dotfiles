@@ -23,3 +23,9 @@
     ~/.claude/statusline-command.sh:
       path: claude/statusline-command.sh
       force: true
+    ~/.config/bat: bat
+    ~/.config/lazygit: lazygit
+    ~/.config/ranger: ranger
+    ~/.fzfrc: fzfrc
+    ~/.asdfrc: asdfrc
+    ~/.Brewfile: homebrew/Brewfile
