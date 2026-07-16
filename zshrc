@@ -106,6 +106,7 @@ alias zshconfig="code ~/.zshrc"
 alias ohmyzsh="code ~/.oh-my-zsh"
 alias dcr="docker compose run --rm"
 alias rspec='nocorrect rspec'
+alias lg="lazygit"
 CORRECT_IGNORE='rspec'
 
 
