@@ -1,0 +1,16 @@
+- defaults:
+    link:
+      relink: true
+      create: true
+
+- clean: ["~", "~/.config"]
+
+- link:
+    ~/.zshrc: zshrc
+    ~/worktrees.sh: worktrees.sh
+    ~/.tmux.conf: tmux.conf
+    ~/.gitconfig: gitconfig
+    ~/.config/git/ignore: .config/git/ignore
+    ~/.config/kitty/kitty.conf: .config/kitty/kitty.conf
+    ~/.config/sketchybar/sketchybarrc: .config/sketchybar/sketchybarrc
+    ~/.claude/statusline-command.sh: claude/statusline-command.sh

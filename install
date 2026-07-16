@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+DOTFILES="$(cd "$(dirname "$0")" && pwd)"
+cd "$DOTFILES"
+git submodule update --init --recursive
+"$DOTFILES/dotbot/bin/dotbot" -d "$DOTFILES" -c install.conf.yaml "$@"
