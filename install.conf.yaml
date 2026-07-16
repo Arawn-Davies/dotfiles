@@ -6,13 +6,11 @@
 - clean: ["~", "~/.config"]
 
 # Managed files. `force: true` replaces a pre-existing real file with a symlink;
-# used only on the four force-linked files below, whose content is already in
-# the repo (zshrc secrets live in the untracked ~/.zshrc.local, sourced by the
-# tracked zshrc), so nothing is lost.
+# used only on files whose content is already in the repo (zshrc secrets live in
+# the untracked ~/.zshrc.local, sourced by the tracked zshrc), so nothing is lost.
 # Deliberately NOT managed (left as live real files, so `./install` will not
-# provision them on a fresh machine): ~/.gitconfig, ~/.config/git/ignore,
-# ~/.config/kitty/kitty.conf, ~/.config/sketchybar/sketchybarrc. Note their
-# repo copies are still tracked and can drift from the live files.
+# provision them on a fresh machine): ~/.gitconfig, ~/.config/git/ignore.
+# Note their repo copies are still tracked and can drift from the live files.
 - link:
     ~/.zshrc:
       path: zshrc
@@ -34,3 +32,9 @@
     ~/.Brewfile: homebrew/Brewfile
     ~/.config/nvim: neovim
     ~/.config/tmux/scripts: tmux/scripts
+    ~/.config/kitty/kitty.conf:
+      path: .config/kitty/kitty.conf
+      force: true
+    ~/.config/sketchybar:
+      path: .config/sketchybar
+      force: true

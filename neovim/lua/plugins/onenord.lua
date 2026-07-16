@@ -1,6 +1,6 @@
 return {
   "rmehri01/onenord.nvim",
-  enabled = true,
+  enabled = false,
   lazy = false,
   config = function()
     local colors = require("config.colors").colors

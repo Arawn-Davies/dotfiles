@@ -18,7 +18,7 @@ require("lazy").setup({
   defaults = { lazy = false, version = false },
   change_detection = { enabled = true, notify = false },
   concurrency = 50,
-  install = { colorscheme = { "onenord" } },
+  install = { colorscheme = { "catppuccin" } },
   checker = { enabled = true, notify = false },
   ui = { size = { width = 0.7, height = 0.7 } },
   performance = {
