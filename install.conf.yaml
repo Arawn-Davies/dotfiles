@@ -30,3 +30,4 @@
     ~/.asdfrc: asdfrc
     ~/.Brewfile: homebrew/Brewfile
     ~/.config/nvim: neovim
+    ~/.config/tmux/scripts: tmux/scripts
