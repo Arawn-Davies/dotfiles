@@ -65,6 +65,75 @@ function _wt:default_port() {
   echo "${val:-$fallback}"
 }
 
+# Find first available APP_PORT starting from defaults where app/db/redis all avoid conflicts
+function _wt:next_app_port() {
+  local bare
+  bare=$(_wt:bare) || { echo "3000"; return; }
+
+  local base_app=$(_wt:default_port APP_PORT 3000)
+  local base_db=$(_wt:default_port DB_PORT 3306)
+  local base_redis=$(_wt:default_port REDIS_PORT 6379)
+
+  # Build set of ALL assigned ports (app, db, redis)
+  local -A taken
+  local port
+  for key in APP_PORT DB_PORT REDIS_PORT; do
+    while IFS= read -r port; do
+      taken[$port]=1
+    done < <(_wt:used_ports "$key")
+  done
+
+  # Start from default, find first offset where all three ports are free
+  local offset=0
+  while true; do
+    local app_port=$(( base_app + offset ))
+    local db_port=$(( base_db + offset ))
+    local redis_port=$(( base_redis + offset ))
+    if [[ -z "${taken[$app_port]}" && -z "${taken[$db_port]}" && -z "${taken[$redis_port]}" ]]; then
+      echo "$app_port"
+      return
+    fi
+    (( offset++ ))
+  done
+}
+
+# Write port assignments to .env, preserving any existing non-port variables
+function _wt:write_ports() {
+  local existing_app_port
+  existing_app_port=$(grep -m1 '^APP_PORT=' .env 2>/dev/null | cut -d= -f2)
+
+  local base_app=$(_wt:default_port APP_PORT 3000)
+  local base_db=$(_wt:default_port DB_PORT 3306)
+  local base_redis=$(_wt:default_port REDIS_PORT 6379)
+
+  local app_port=${existing_app_port:-$(_wt:next_app_port)}
+  local offset=$(( app_port - base_app ))
+  local db_port=$(( base_db + offset ))
+  local redis_port=$(( base_redis + offset ))
+
+  local other_vars=""
+  if [[ -f .env ]]; then
+    other_vars=$(grep -v '^APP_PORT=\|^DB_PORT=\|^REDIS_PORT=' .env)
+  fi
+
+  {
+    printf 'APP_PORT=%s\nDB_PORT=%s\nREDIS_PORT=%s\n' \
+      "$app_port" "$db_port" "$redis_port"
+    [[ -n "$other_vars" ]] && printf '%s\n' "$other_vars"
+  } > .env
+
+  echo "Ports — app: $app_port, db: $db_port, redis: $redis_port"
+}
+
+# Run the project's post-create hook if it exists. Anything project-specific
+# (Rails master.key, npm install, copying envs, …) belongs here, not in the
+# generic helpers. The hook is run from the new worktree's root and inherits
+# the current shell's environment.
+function _wt:run_postcreate() {
+  [[ -x .wt-postcreate ]] || return 0
+  echo "Running .wt-postcreate…"
+  ./.wt-postcreate
+}
 
 # Stop containers, remove worktree directory, prune refs, delete branch.
 # force=true → git branch -D (drops unmerged); force=false → git branch -d.
@@ -72,6 +141,8 @@ function _wt:destroy() {
   local wt_path=$1 branch=$2 force=$3
 
   if [[ -d "$wt_path" ]]; then
+    docker compose -f "$wt_path/docker-compose.yml" --env-file "$wt_path/.env" down &>/dev/null || true
+    git -C "$wt_path" submodule deinit --all -f 2>/dev/null
     rm -rf "$wt_path"
   fi
 
@@ -100,7 +171,7 @@ function _wt:destroy() {
 #   wt:config defaultBase sprint_ee     # set sprint_ee as the wt:create base
 #   wt:config defaultBase               # → sprint_ee
 #   wt:config                           # → wt.defaultbase sprint_ee
-#   wt:config defaultBase --unset       # remove the override; wt:create falls back to main
+#   wt:config defaultBase --unset       # remove the override; wt:create falls back to master
 #
 # Known keys:
 #   defaultBase    Branch used as the base when wt:create is called without one
@@ -160,7 +231,7 @@ function wt:init() {
 #
 # Examples:
 #   wt:list
-#       # → main
+#       # → master
 #       #   sprint_ee
 #       #   misc/worktree-postcreate-hook
 #   wt:list | wc -l    # count worktrees
@@ -174,7 +245,7 @@ function wt:list() {
 }
 
 # Show detailed worktree info in a table: git dirty state, docker status,
-# assigned ports, HEAD hash, last commit date, ahead/behind main.
+# assigned ports, HEAD hash, last commit date, ahead/behind master.
 # Works from any worktree folder.
 #
 # Usage:
@@ -183,7 +254,7 @@ function wt:list() {
 # Examples:
 #   wt:info
 #       # ┌──────────────────┬─────┬─────┬────────────────┬─────────┬──────────────────┬───────────┐
-#       # │ Branch           │ Git │ Doc │ App:Db:Redis   │ Hash    │ Last Committed   │ vs main │
+#       # │ Branch           │ Git │ Doc │ App:Db:Redis   │ Hash    │ Last Committed   │ vs master │
 #       # ├──────────────────┼─────┼─────┼────────────────┼─────────┼──────────────────┼───────────┤
 #       # │ feature/my-thing │  ✓  │  ●  │ 3005:3311:6384 │ a1b2c3d │ 2026-05-14 09:01 │ ↑12 ↓0    │
 #       # └──────────────────┴─────┴─────┴────────────────┴─────────┴──────────────────┴───────────┘
@@ -191,10 +262,10 @@ function wt:info() {
   local bare
   bare=$(_wt:bare) || { echo "Error: no .bare found in or above $(pwd)."; return 1; }
 
-  local -a wt_branches wt_hashes wt_dates wt_ahead wt_dirty wt_docker
+  local -a wt_branches wt_hashes wt_dates wt_ahead wt_dirty wt_docker wt_ports
   local wt_branch wt_hash wt_date_str wt_counts wt_behind wt_a wt_ahead_str
   local wt_path_str wt_port_str p_app p_db p_redis
-  local max_br=6 max_date=16 max_ahead=9
+  local max_br=6 max_date=16 max_ahead=9 max_port=14
 
   # First pass: collect data and find max branch length
   git -C "$bare" worktree list --porcelain | while IFS= read -r line; do
@@ -215,7 +286,7 @@ function wt:info() {
       wt_dates+=("$wt_date_str")
       (( ${#wt_date_str} > max_date )) && max_date=${#wt_date_str}
 
-      wt_counts=$(git -C "$bare" rev-list --left-right --count "main...$wt_branch" 2>/dev/null)
+      wt_counts=$(git -C "$bare" rev-list --left-right --count "master...$wt_branch" 2>/dev/null)
       wt_behind=${wt_counts%%	*} wt_a=${wt_counts##*	}
       wt_ahead_str="↑${wt_a:-0} ↓${wt_behind:-0}"
       wt_ahead+=("$wt_ahead_str")
@@ -232,8 +303,32 @@ function wt:info() {
         wt_dirty+=("?")
       fi
 
-      wt_docker+=("─")
+      # Docker status
+      if [[ -f "$wt_path_str/docker-compose.yml" && -f "$wt_path_str/.env" ]]; then
+        if docker compose -f "$wt_path_str/docker-compose.yml" --env-file "$wt_path_str/.env" ps --status running 2>/dev/null | grep -q .; then
+          wt_docker+=("●")
+        else
+          wt_docker+=("○")
+        fi
+      else
+        wt_docker+=("─")
+      fi
 
+      # Ports from .env
+      if [[ -f "$wt_path_str/.env" ]]; then
+        p_app=$(grep -m1 '^APP_PORT=' "$wt_path_str/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+        p_db=$(grep -m1 '^DB_PORT=' "$wt_path_str/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+        p_redis=$(grep -m1 '^REDIS_PORT=' "$wt_path_str/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+        if [[ -n "$p_app" || -n "$p_db" || -n "$p_redis" ]]; then
+          wt_port_str="${p_app:-─}:${p_db:-─}:${p_redis:-─}"
+        else
+          wt_port_str="─"
+        fi
+      else
+        wt_port_str="─"
+      fi
+      wt_ports+=("$wt_port_str")
+      (( ${#wt_port_str} > max_port )) && max_port=${#wt_port_str}
 
       (( ${#wt_branch} > max_br )) && max_br=${#wt_branch}
       wt_branch="" wt_hash="" wt_path_str=""
@@ -243,6 +338,7 @@ function wt:info() {
   local hash_len=7
   local br_col=$(( max_br + 2 )) ha_col=$(( hash_len + 2 ))
   local da_col=$(( max_date + 2 )) ah_col=$(( max_ahead + 2 ))
+  local po_col=$(( max_port + 2 ))
 
   # Border parts
   local br_line ha_line da_line ah_line st_line po_line
@@ -256,18 +352,19 @@ function wt:info() {
   # Table
   printf '┌%s┬%s┬%s┬%s┬%s┬%s┬%s┐\n' "$br_line" "$st_line" "$st_line" "$po_line" "$ha_line" "$da_line" "$ah_line"
   printf '│ %-*s │ %s │ %s │ %-*s │ %-*s │ %-*s │ %-*s │\n' \
-    "$max_br" "Branch" "Git" "Doc" "$hash_len" "Hash" "$max_date" "Last Committed" "$max_ahead" "vs main"
-  printf '├%s┼%s┼%s┼%s┼%s┼%s┼%s┤\n' "$br_line" "$st_line" "$st_line" "$ha_line" "$da_line" "$ah_line"
+    "$max_br" "Branch" "Git" "Doc" "$max_port" "App:Db:Redis" "$hash_len" "Hash" "$max_date" "Last Committed" "$max_ahead" "vs master"
+  printf '├%s┼%s┼%s┼%s┼%s┼%s┼%s┤\n' "$br_line" "$st_line" "$st_line" "$po_line" "$ha_line" "$da_line" "$ah_line"
   for (( i=1; i<=${#wt_branches}; i++ )); do
     printf '│ %-*s │  %s  │  %s  │ %-*s │ %-*s │ %-*s │ %-*s │\n' \
       "$max_br" "${wt_branches[$i]}" \
       "${wt_dirty[$i]}" \
       "${wt_docker[$i]}" \
+      "$max_port" "${wt_ports[$i]}" \
       "$hash_len" "${wt_hashes[$i]}" \
       "$max_date" "${wt_dates[$i]}" \
       "$max_ahead" "${wt_ahead[$i]}"
   done
-  printf '└%s┴%s┴%s┴%s┴%s┴%s┘\n' "$br_line" "$st_line" "$st_line" "$ha_line" "$da_line" "$ah_line"
+  printf '└%s┴%s┴%s┴%s┴%s┴%s┴%s┘\n' "$br_line" "$st_line" "$st_line" "$po_line" "$ha_line" "$da_line" "$ah_line"
 }
 
 # Add an existing remote branch as a worktree. Creates the worktree directory
@@ -291,7 +388,7 @@ function wt:add() {
 
   git -C .bare worktree prune
   git -C .bare worktree add "../$1" "$1" || return 1
-  cd "$1"
+  cd "$1" && git submodule update --init --recursive && _wt:write_ports && _wt:run_postcreate
 }
 
 # Create a new worktree with a new branch. After creation: initialises
@@ -303,11 +400,11 @@ function wt:add() {
 # Base resolution:
 #   1. The [base] argument if provided.
 #   2. `wt:config defaultBase` if set (per-project override).
-#   3. "main" as the final fallback.
+#   3. "master" as the final fallback.
 #
 # Examples:
 #   wt:create feature/cool-thing
-#       # → new branch from the configured default base (or main)
+#       # → new branch from the configured default base (or master)
 #   wt:create feature/cool-thing sprint_ee
 #       # → new branch from sprint_ee (overrides defaultBase)
 #   wt:config defaultBase sprint_ee && wt:create feature/cool-thing
@@ -321,11 +418,11 @@ function wt:create() {
 
   local configured_base
   configured_base=$(git -C .bare config wt.defaultBase 2>/dev/null)
-  local base="${2:-${configured_base:-main}}"
+  local base="${2:-${configured_base:-master}}"
 
   git -C .bare worktree prune
   git -C .bare worktree add "../$1" -b "$1" "$base" || return 1
-  cd "$1"
+  cd "$1" && git submodule update --init --recursive && _wt:write_ports && _wt:run_postcreate
 }
 
 # Rename a worktree directory and its branch. Updates the worktree's gitdir
@@ -664,7 +761,7 @@ Worktree commands (most require project root containing .bare/):
   wt:init <remote-url> [folder]   Clone a repo as a bare repo ready for worktrees
   wt:add <branch>                 Check out an existing remote branch as a worktree
   wt:create <branch> [base]       Create a new branch and worktree
-                                  base = arg > wt:config defaultBase > main
+                                  base = arg > wt:config defaultBase > master
   wt:config [<key> [<value>|--unset]]
                                   Read or write wt.* config on the bare repo
   wt:list                       * List worktree branch names
@@ -682,7 +779,7 @@ After wt:add / wt:create the new worktree is also set up with:
   - ./.wt-postcreate executed if present and executable — see below.
 
 Default base branch for wt:create:
-  Override the "main" default per-project with wt:config:
+  Override the "master" default per-project with wt:config:
 
     wt:config defaultBase sprint_ee
 
@@ -699,18 +796,18 @@ Project post-create hook (./.wt-postcreate):
   Keep secrets OUT of the script — read them from env vars users export
   wherever their shell sources them (e.g. ~/secrets.sh). Convention for
   per-project secret env vars: WT_<PURPOSE>_<PROJECT>, e.g.
-  WT_main_KEY_DEMOSYSTEM.
+  WT_MASTER_KEY_DEMOSYSTEM.
 
-  Example .wt-postcreate (Rails: bootstrap config/main.key):
+  Example .wt-postcreate (Rails: bootstrap config/master.key):
 
     #!/usr/bin/env bash
     set -euo pipefail
-    key="${WT_main_KEY_DEMOSYSTEM:-}"
+    key="${WT_MASTER_KEY_DEMOSYSTEM:-}"
     if [[ -n "$key" && -d config ]]; then
-      if [[ ! -f config/main.key || "$(<config/main.key)" != "$key" ]]; then
-        printf '%s' "$key" > config/main.key
-        chmod 600 config/main.key
-        echo "main.key written from \$WT_main_KEY_DEMOSYSTEM"
+      if [[ ! -f config/master.key || "$(<config/master.key)" != "$key" ]]; then
+        printf '%s' "$key" > config/master.key
+        chmod 600 config/master.key
+        echo "master.key written from \$WT_MASTER_KEY_DEMOSYSTEM"
       fi
     fi
 

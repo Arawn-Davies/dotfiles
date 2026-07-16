@@ -162,3 +162,7 @@ prompt_dir() {
 
 
 source ~/worktrees.sh
+
+# Machine-local config & secrets (untracked): tool paths, shell completions,
+# API tokens, master keys. See ~/.zshrc.local
+[ -f ~/.zshrc.local ] && source ~/.zshrc.local

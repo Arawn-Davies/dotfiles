@@ -5,12 +5,21 @@
 
 - clean: ["~", "~/.config"]
 
+# Managed files. `force` replaces the pre-existing real file with a symlink;
+# safe here because their content is preserved in the repo (zshrc secrets live
+# in the untracked ~/.zshrc.local, sourced by the tracked zshrc).
+# Deliberately NOT managed (left as your live real files): ~/.gitconfig,
+# ~/.config/git/ignore, ~/.config/kitty/kitty.conf, ~/.config/sketchybar/sketchybarrc.
 - link:
-    ~/.zshrc: zshrc
-    ~/worktrees.sh: worktrees.sh
-    ~/.tmux.conf: tmux.conf
-    ~/.gitconfig: gitconfig
-    ~/.config/git/ignore: .config/git/ignore
-    ~/.config/kitty/kitty.conf: .config/kitty/kitty.conf
-    ~/.config/sketchybar/sketchybarrc: .config/sketchybar/sketchybarrc
-    ~/.claude/statusline-command.sh: claude/statusline-command.sh
+    ~/.zshrc:
+      path: zshrc
+      force: true
+    ~/worktrees.sh:
+      path: worktrees.sh
+      force: true
+    ~/.tmux.conf:
+      path: tmux.conf
+      force: true
+    ~/.claude/statusline-command.sh:
+      path: claude/statusline-command.sh
+      force: true
