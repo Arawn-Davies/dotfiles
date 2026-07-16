@@ -41,11 +41,12 @@ All script references use `~/.config/tmux/scripts/...` and dirname-relative sour
 
 Files copied into `~/dotfiles`:
 - `tmux/scripts/claude-lib.sh`, `claude-notify.sh`, `claude-tick.sh`, `claude-jump.sh`, `claude-clear-done.sh`
-- `claude/statusline-command.sh`
+
+**Paul's `claude/statusline-command.sh` is NOT ported.** The user already has their own `~/.claude/statusline-command.sh` (their Claude usage bar), and Paul's `statusLine` config is byte-identical. The Claude *TUI* statusline is a separate concern from the *tmux* status dots. Instead, the user's OWN statusline is copied into the repo (`claude/statusline-command.sh`) and dotbot-linked back to `~/.claude/statusline-command.sh` — same content, now version-controlled.
 
 Wiring:
-- dotbot-symlink `~/.config/tmux/scripts` (dir) and `~/.claude/statusline-command.sh`.
-- **Merge** into `~/.claude/settings.json`: the 6 hook entries (mapping the correct hook events → `claude-notify.sh <state>`) and the `statusLine` command. Preserve every existing key/hook. The Paul-private `context-mode-cache-heal.mjs` PreToolUse hook is **dropped**.
+- dotbot-symlink `~/.config/tmux/scripts` (dir) and `~/.claude/statusline-command.sh` (the user's own, tracked).
+- **Merge** into `~/.claude/settings.json`: the notify hook entries (SessionStart, UserPromptSubmit, Notification, Stop, PreToolUse, PostToolUse, SessionEnd → `claude-notify.sh <state>`). Preserve every existing key/hook. `statusLine` is left as-is (already identical). The Paul-private `context-mode-cache-heal.mjs` SessionStart hook is **dropped** (the user already has their own cache-heal).
 - **Graft** into `tmux.conf`: the `status-right` `claude-tick.sh` call; the `@claude_alert` ● conditional woven into the user's own `window-status-format`/`window-status-current-format`; the `pane-focus-in` → `claude-clear-done.sh` hook; the `A` jump keybinding (adapted to the user's prefix/key-table scheme, not Paul's `tmux-popup` table).
 
 ### C. Neovim
