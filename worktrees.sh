@@ -493,8 +493,14 @@ function wt:rename() {
   # ../../../../../../<old-name>/...". The worktree-name appears nowhere else in
   # these configs, so a scoped sed is safe.
   if [[ -d "$wt_git_dir/modules" ]]; then
+    # Escape regex/replacement metacharacters so worktree names containing
+    # '.', '*', '[', etc. match literally (BRE pattern on the left, sed
+    # replacement on the right; '|' is the sed delimiter).
+    local old_esc new_esc
+    old_esc=$(printf '%s' "$old" | sed 's/[^[:alnum:]_-]/\\&/g')
+    new_esc=$(printf '%s' "$new" | sed 's/[&|\\]/\\&/g')
     while IFS= read -r cfg; do
-      sed -i.bak "s|/$old/|/$new/|g" "$cfg" && rm -f "$cfg.bak"
+      sed -i.bak "s|/$old_esc/|/$new_esc/|g" "$cfg" && rm -f "$cfg.bak"
     done < <(find "$wt_git_dir/modules" -name config -type f)
   fi
 
