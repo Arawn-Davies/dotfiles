@@ -163,6 +163,7 @@ prompt_dir() {
 
 
 source ~/worktrees.sh
+source ~/fleet.sh
 
 # Machine-local config & secrets (untracked): tool paths, shell completions,
 # API tokens, master keys. See ~/.zshrc.local

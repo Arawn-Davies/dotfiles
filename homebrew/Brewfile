@@ -1,3 +1,6 @@
+# Cross-platform formulae (macOS + Linux/WSL2). macOS-only formulae and all
+# casks (GUI apps, fonts) live in Brewfile.mac instead, since Homebrew on
+# Linux doesn't support `cask` at all and would fail on them.
 tap "autozimu/formulas"
 tap "heroku/brew"
 tap "sass/sass"
@@ -63,7 +66,6 @@ brew "neofetch"
 brew "neovim"
 brew "ninja"
 brew "nmap"
-brew "nowplaying-cli"
 brew "openssl@3.5"
 brew "pkgconf"
 brew "postgresql@15"
@@ -89,8 +91,3 @@ brew "wget"
 brew "yaml-language-server"
 brew "yarn"
 brew "zsh"
-cask "claude"
-cask "font-hack-nerd-font"
-cask "font-symbols-only-nerd-font"
-cask "gpg-suite"
-cask "kitty"

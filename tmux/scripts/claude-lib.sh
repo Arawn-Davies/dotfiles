@@ -51,6 +51,30 @@ claude_rollup() {
   fi
 }
 
+# Fire a best-effort OS desktop notification titled "Claude" with the given body.
+#   macOS  -> osascript
+#   WSL2   -> Windows toast via powershell.exe (backgrounded so the status
+#             bar redraw driving this script never blocks on it)
+#   Linux  -> notify-send, if a notification daemon is present
+desktop_notify() {
+  local body="$1"
+  case "$(uname)" in
+    Darwin)
+      osascript -e "display notification \"${body//\"/\\\"}\" with title \"Claude\"" >/dev/null 2>&1
+      ;;
+    *)
+      if grep -qi microsoft /proc/version 2>/dev/null && command -v powershell.exe >/dev/null 2>&1; then
+        local esc="${body//\'/\'\'}"
+        ( powershell.exe -NoProfile -WindowStyle Hidden -Command \
+            "Add-Type -AssemblyName System.Windows.Forms; \$n = New-Object System.Windows.Forms.NotifyIcon; \$n.Icon = [System.Drawing.SystemIcons]::Information; \$n.BalloonTipTitle = 'Claude'; \$n.BalloonTipText = '$esc'; \$n.Visible = \$true; \$n.ShowBalloonTip(5000); Start-Sleep -Seconds 6; \$n.Dispose()" \
+            >/dev/null 2>&1 & )
+      elif command -v notify-send >/dev/null 2>&1; then
+        notify-send "Claude" "$body" >/dev/null 2>&1
+      fi
+      ;;
+  esac
+}
+
 # Format an age in seconds as a compact string: 45s, 3m, 2h.
 fmt_age() {
   local s="$1"

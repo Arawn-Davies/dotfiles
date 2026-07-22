@@ -1,0 +1,8 @@
+# macOS-only formulae and casks. Run alongside Brewfile on macOS:
+#   brew bundle --file=Brewfile && brew bundle --file=Brewfile.mac
+brew "nowplaying-cli"
+cask "claude"
+cask "font-hack-nerd-font"
+cask "font-symbols-only-nerd-font"
+cask "gpg-suite"
+cask "kitty"

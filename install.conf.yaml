@@ -18,6 +18,9 @@
     ~/worktrees.sh:
       path: worktrees.sh
       force: true
+    ~/fleet.sh:
+      path: fleet.sh
+      force: true
     ~/.tmux.conf:
       path: tmux.conf
       force: true
@@ -30,8 +33,11 @@
     ~/.fzfrc: fzfrc
     ~/.asdfrc: asdfrc
     ~/.Brewfile: homebrew/Brewfile
+    ~/.Brewfile.mac: homebrew/Brewfile.mac
     ~/.config/nvim: neovim
     ~/.config/tmux/scripts: tmux/scripts
+    # kitty and sketchybar (menu-bar tool) are only used on macOS; linking their
+    # configs on Linux/WSL2 is harmless since nothing there reads them.
     ~/.config/kitty/kitty.conf:
       path: .config/kitty/kitty.conf
       force: true

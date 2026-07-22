@@ -2,5 +2,17 @@
 set -euo pipefail
 DOTFILES="$(cd "$(dirname "$0")" && pwd)"
 cd "$DOTFILES"
+
+# zshrc depends on Oh My Zsh but it isn't vendored here (large, frequently
+# updated upstream project) -- bootstrap it if this machine doesn't have it yet.
+# RUNZSH=no / CHSH=no keep the installer from launching a shell or changing the
+# login shell; KEEP_ZSHRC=yes avoids a pointless backup since dotbot force-links
+# ~/.zshrc to the repo's copy right after this runs anyway.
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+  echo "Oh My Zsh not found, installing..."
+  RUNZSH=no CHSH=no KEEP_ZSHRC=yes \
+    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+fi
+
 git submodule update --init --recursive
 "$DOTFILES/dotbot/bin/dotbot" -d "$DOTFILES" -c install.conf.yaml "$@"

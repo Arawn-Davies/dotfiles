@@ -4,7 +4,7 @@
 # state, then prints the bottom-right "needs you" banner. Three side jobs:
 #   1. clean    - clear state for panes whose claude has died (no SessionEnd)
 #   2. rollup   - refresh the window dot for any window it cleaned
-#   3. escalate - macOS-notify urgent panes untouched for >= ALERT_AFTER seconds
+#   3. escalate - desktop-notify urgent panes untouched for >= ALERT_AFTER seconds
 # All side-effects are idempotent (the @claude_notified flag de-dups alerts), so
 # it is safe to run once per redraw per attached client.
 
@@ -50,7 +50,7 @@ while IFS="$us" read -r pane win tty state since notified onscreen; do
   # 3. Escalate: blocked long enough and not yet alerted.
   age=$((now - since))
   if [ "$notified" != 1 ] && [ "$age" -ge "$ALERT_AFTER" ]; then
-    osascript -e "display notification \"${name:-A session} needs your input\" with title \"Claude\"" >/dev/null 2>&1
+    desktop_notify "${name:-A session} needs your input"
     tmux set-option -p -t "$pane" @claude_notified 1 2>/dev/null || true
   fi
 
